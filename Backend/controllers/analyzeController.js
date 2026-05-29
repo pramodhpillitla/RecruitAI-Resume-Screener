@@ -12,23 +12,54 @@ export const analyzeResumes = async (req, res) => {
             return res.status(400).json({ error: "Job description is required" });
         }
 
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "No resumes uploaded" });
+        }
+
         const results = await Promise.all(
             req.files.map(async (file) => {
-                const text = await extractText(file.path, file.mimetype);
+                try {
+                    const text = await extractText(file.path, file.mimetype);
 
-                const aiData = await analyzeResume(text, jdText);
+                    if (!text) {
+                        return {
+                            name: file.originalname,
+                            score: 0,
+                            skills_match: [],
+                            missing_skills: [],
+                            summary: "Failed to extract text from file or file format not supported.",
+                            error: true
+                        };
+                    }
 
-                const score = calculateScore(aiData);
+                    const aiData = await analyzeResume(text, jdText);
+                    const score = calculateScore(aiData);
 
-                fs.unlinkSync(file.path);
-
-                return {
-                    name: aiData.candidate_name || file.originalname,
-                    score,
-                    skills_match: aiData.skills_match || [],
-                    missing_skills: aiData.missing_skills || [],
-                    summary: aiData.summary || ""
-                };
+                    return {
+                        name: aiData.candidate_name || file.originalname,
+                        score,
+                        skills_match: aiData.skills_match || [],
+                        missing_skills: aiData.missing_skills || [],
+                        summary: aiData.summary || "",
+                        error: aiData.summary === "Parsing failed"
+                    };
+                } catch (err) {
+                    console.error(`Error processing file ${file.originalname}:`, err);
+                    return {
+                        name: file.originalname,
+                        score: 0,
+                        skills_match: [],
+                        missing_skills: [],
+                        summary: "An error occurred during analysis.",
+                        error: true
+                    };
+                } finally {
+                    try {
+                        await fs.promises.unlink(file.path);
+                    } catch (unlinkErr) {
+                        console.error(`Failed to delete temp file ${file.path}:`, unlinkErr);
+                    }
+                }
             })
         );
 
@@ -38,7 +69,7 @@ export const analyzeResumes = async (req, res) => {
         res.json(results);
 
     } catch (error) {
-        console.error(error);
+        console.error("Critical error in analyzeResumes:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 }

@@ -10,7 +10,10 @@ function cleanJSON(text) {
 }
 
 export async function analyzeResume(resumeText, jdText) {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: { responseMimeType: "application/json" }
+    });
 
     const prompt = `
 You are an AI resume screening assistant.
