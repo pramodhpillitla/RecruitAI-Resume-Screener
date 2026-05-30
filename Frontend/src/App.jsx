@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import UploadSection from './components/UploadSection';
@@ -190,7 +190,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="site-footer">
-        Built with care · RecruitAI © {new Date().getFullYear()}
+        Built with care - RecruitAI {new Date().getFullYear()}
       </footer>
     </div>
   );

@@ -428,6 +428,52 @@ body {
   margin-top: 8px;
 }
 
+.jd-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.jd-file-button,
+.jd-file-chip,
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-muted);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.jd-file-button:hover,
+.jd-file-chip:hover,
+.export-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+  background: rgba(255,255,255,0.06);
+}
+
+.jd-file-button input {
+  display: none;
+}
+
+.jd-file-chip {
+  max-width: 100%;
+  color: var(--brand-300);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ============================================
    DROP ZONE
    ============================================ */
@@ -594,6 +640,38 @@ body {
   margin-bottom: 32px;
 }
 
+.results-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) auto auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 800px) {
+  .results-toolbar { grid-template-columns: 1fr; }
+}
+
+.results-search,
+.results-sort {
+  min-height: 38px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-muted);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+}
+
+.results-search:focus,
+.results-sort:focus {
+  border-color: rgba(124, 58, 237, 0.45);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
 .back-btn {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 16px;
@@ -757,6 +835,20 @@ body {
   font-size: 13px;
   line-height: 1.75;
   color: var(--text-secondary);
+}
+
+.preview-link {
+  display: inline-flex;
+  align-items: center;
+  margin: -6px 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-400);
+  text-decoration: none;
+}
+
+.preview-link:hover {
+  text-decoration: underline;
 }
 
 /* Skills */
