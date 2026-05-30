@@ -1,11 +1,12 @@
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
-import fs from "fs";
+import fs from "fs/promises";
 
 export async function extractText(filePath, mimeType) {
     try {
         if (mimeType === "application/pdf") {
-            const data = await pdfParse(fs.readFileSync(filePath));
+            const buffer = await fs.readFile(filePath);
+            const data = await pdfParse(buffer);
             return data.text;
         }
 

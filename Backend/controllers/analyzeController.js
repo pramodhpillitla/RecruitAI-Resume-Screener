@@ -1,12 +1,39 @@
 import fs from "fs";
 
 import { extractText } from "../utils/parser.js";
-import { analyzeResume } from "../services/geminiService.js";
+import { analyzeResume, getConfiguredProvider } from "../services/groqService.js";
 import { calculateScore } from "../services/scoringService.js";
+
+const MAX_PARALLEL_AI_CALLS = 2;
+
+async function runWithConcurrency(items, limit, worker) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+
+    async function runNext() {
+        const index = nextIndex;
+        nextIndex += 1;
+
+        if (index >= items.length) {
+            return;
+        }
+
+        results[index] = await worker(items[index], index);
+        await runNext();
+    }
+
+    const workers = Array.from(
+        { length: Math.min(limit, items.length) },
+        () => runNext()
+    );
+
+    await Promise.all(workers);
+    return results;
+}
 
 export const analyzeResumes = async (req, res) => {
     try {
-        const jdText = req.body.jd;
+        const jdText = req.body.jd?.trim();
 
         if (!jdText) {
             return res.status(400).json({ error: "Job description is required" });
@@ -16,8 +43,15 @@ export const analyzeResumes = async (req, res) => {
             return res.status(400).json({ error: "No resumes uploaded" });
         }
 
-        const results = await Promise.all(
-            req.files.map(async (file) => {
+        const aiConfig = getConfiguredProvider();
+        if (!aiConfig.configured) {
+            return res.status(500).json({ error: `${aiConfig.provider} API key is not configured` });
+        }
+
+        const results = await runWithConcurrency(
+            req.files,
+            MAX_PARALLEL_AI_CALLS,
+            async (file) => {
                 try {
                     const text = await extractText(file.path, file.mimetype);
 
@@ -60,7 +94,7 @@ export const analyzeResumes = async (req, res) => {
                         console.error(`Failed to delete temp file ${file.path}:`, unlinkErr);
                     }
                 }
-            })
+            }
         );
 
         results.sort((a, b) => b.score - a.score);
@@ -72,4 +106,4 @@ export const analyzeResumes = async (req, res) => {
         console.error("Critical error in analyzeResumes:", error);
         res.status(500).json({ error: "Internal server error" });
     }
-}
+};
