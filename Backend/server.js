@@ -17,7 +17,7 @@ const app = express();
 
 app.use(helmet());
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "")
+const allowedOrigins = (process.env.CORS_ORIGIN || "*")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -75,13 +75,11 @@ app.use("/api/analyze", limiter, analyzeRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-ensureStorage()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    })
-    .catch((error) => {
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Initialize storage in the background so the server binds the port immediately
+    ensureStorage().catch((error) => {
         console.error("Failed to initialize storage:", error);
-        process.exit(1);
     });
+});
