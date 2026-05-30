@@ -77,9 +77,20 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
-    
+
     // Initialize storage in the background so the server binds the port immediately
     ensureStorage().catch((error) => {
         console.error("Failed to initialize storage:", error);
     });
 });
+
+app.use(
+    cors({
+        origin: [
+            "http://localhost:5173", // for local dev
+            "https://recruit-ai-resume-screener.vercel.app"
+        ],
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true
+    })
+);
