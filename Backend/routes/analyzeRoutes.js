@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 
 import { analyzeResumes } from "../controllers/analyzeController.js";
+import { getAnalysisHistory, previewResume } from "../controllers/analyzeController.js";
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const upload = multer({
     dest: "uploads/",
     limits: {
         fileSize: 5 * 1024 * 1024,
-        files: 10
+        files: 11
     },
     fileFilter: (_req, file, cb) => {
         if (allowedMimeTypes.has(file.mimetype)) {
@@ -27,8 +28,14 @@ const upload = multer({
     }
 });
 
+router.get("/history", getAnalysisHistory);
+router.get("/files/:storedName", previewResume);
+
 router.post("/", (req, res, next) => {
-    upload.array("resumes")(req, res, (err) => {
+    upload.fields([
+        { name: "resumes", maxCount: 10 },
+        { name: "jdFile", maxCount: 1 }
+    ])(req, res, (err) => {
         if (!err) {
             next();
             return;

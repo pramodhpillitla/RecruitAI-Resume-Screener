@@ -14,14 +14,16 @@ const pageFade = {
 
 export default function App() {
   const [jd, setJd]           = useState('');
+  const [jdFile, setJdFile]   = useState(null);
   const [files, setFiles]     = useState([]);
   const [isLoading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
+  const [analysisId, setAnalysisId] = useState('');
   const [error, setError]     = useState('');
 
   const handleAnalyze = async () => {
-    if (!jd.trim()) {
-      setError('Paste a job description before analyzing.');
+    if (!jd.trim() && !jdFile) {
+      setError('Paste a job description or upload a JD document before analyzing.');
       return;
     }
 
@@ -34,10 +36,12 @@ export default function App() {
     setError('');
     const fd = new FormData();
     fd.append('jd', jd);
+    if (jdFile) fd.append('jdFile', jdFile);
     files.forEach(f => fd.append('resumes', f));
     try {
       const res = await axios.post(`${API_BASE_URL}/api/analyze`, fd);
-      setResults(res.data);
+      setAnalysisId(res.data.analysisId || '');
+      setResults(res.data.results || res.data);
     } catch (err) {
       const message = err.response?.data?.error
         || err.message
@@ -48,7 +52,13 @@ export default function App() {
     }
   };
 
-  const handleReset = () => { setResults(null); setFiles([]); setError(''); };
+  const handleReset = () => {
+    setResults(null);
+    setAnalysisId('');
+    setFiles([]);
+    setJdFile(null);
+    setError('');
+  };
 
   return (
     <div className="app-wrapper">
@@ -81,7 +91,7 @@ export default function App() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
             </svg>
-            Powered by Gemini AI
+            Powered by Groq AI
           </div>
         </div>
       </header>
@@ -162,6 +172,7 @@ export default function App() {
 
                 <UploadSection
                   jd={jd} setJd={setJd}
+                  jdFile={jdFile} setJdFile={setJdFile}
                   files={files} setFiles={setFiles}
                   onAnalyze={handleAnalyze}
                   isLoading={isLoading}
@@ -170,7 +181,7 @@ export default function App() {
               </motion.div>
             ) : (
               <motion.div key="results" {...pageFade}>
-                <ResultsDashboard results={results} onBack={handleReset} />
+                <ResultsDashboard results={results} analysisId={analysisId} apiBaseUrl={API_BASE_URL} onBack={handleReset} />
               </motion.div>
             )}
           </AnimatePresence>

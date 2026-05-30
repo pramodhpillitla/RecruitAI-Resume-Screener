@@ -58,7 +58,7 @@ function ScoreRing({ score }) {
   );
 }
 
-export default function CandidateCard({ candidate, index }) {
+export default function CandidateCard({ candidate, index, apiBaseUrl }) {
   // Error state
   if (candidate.error) {
     return (
@@ -105,6 +105,12 @@ export default function CandidateCard({ candidate, index }) {
         </div>
         <ScoreRing score={candidate.score} />
       </div>
+
+      {candidate.previewUrl && (
+        <a className="preview-link" href={`${apiBaseUrl}${candidate.previewUrl}`} target="_blank" rel="noreferrer">
+          Preview resume
+        </a>
+      )}
 
       {/* Summary */}
       <div className="card-summary">{candidate.summary}</div>

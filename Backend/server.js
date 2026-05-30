@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 
 import analyzeRoutes from "./routes/analyzeRoutes.js";
 import { getConfiguredProvider } from "./services/groqService.js";
+import { ensureStorage } from "./services/storageService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, ".env") });
@@ -40,6 +41,13 @@ app.use("/api/analyze", limiter, analyzeRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+ensureStorage()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    })
+    .catch((error) => {
+        console.error("Failed to initialize storage:", error);
+        process.exit(1);
+    });

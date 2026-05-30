@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
 
@@ -48,7 +48,7 @@ const IconSparkle = () => (
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_FILES = 10;
 
-export default function UploadSection({ jd, setJd, files, setFiles, onAnalyze, isLoading, setError }) {
+export default function UploadSection({ jd, setJd, jdFile, setJdFile, files, setFiles, onAnalyze, isLoading, setError }) {
   const onDrop = useCallback((accepted) => {
     setError('');
     setFiles(prev => [...prev, ...accepted].slice(0, MAX_FILES));
@@ -72,7 +72,21 @@ export default function UploadSection({ jd, setJd, files, setFiles, onAnalyze, i
   });
 
   const removeFile = (i) => setFiles(files.filter((_, idx) => idx !== i));
-  const isReady = files.length > 0 && jd.trim().length > 0 && !isLoading;
+  const isReady = files.length > 0 && (jd.trim().length > 0 || jdFile) && !isLoading;
+
+  const handleJdFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError('JD file must be 5 MB or smaller.');
+      event.target.value = '';
+      return;
+    }
+
+    setError('');
+    setJdFile(file);
+  };
 
   return (
     <motion.div
@@ -102,6 +116,21 @@ export default function UploadSection({ jd, setJd, files, setFiles, onAnalyze, i
         {jd.length > 0 && (
           <div className="char-count">{jd.length} characters</div>
         )}
+        <div className="jd-file-row">
+          <label className="jd-file-button">
+            Upload JD document
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleJdFile}
+            />
+          </label>
+          {jdFile && (
+            <button className="jd-file-chip" type="button" onClick={() => setJdFile(null)}>
+              {jdFile.name} x
+            </button>
+          )}
+        </div>
       </motion.div>
 
       {/* Resume Upload */}
@@ -132,7 +161,7 @@ export default function UploadSection({ jd, setJd, files, setFiles, onAnalyze, i
           <p className="drop-zone-text">
             {isDragActive ? 'Drop your files here...' : 'Drag & drop resumes, or click to browse'}
           </p>
-          <p className="drop-zone-hint">Supports PDF · DOC · DOCX</p>
+          <p className="drop-zone-hint">Supports PDF · DOC · DOCX, up to 5 MB each</p>
         </div>
 
         {/* File list */}
