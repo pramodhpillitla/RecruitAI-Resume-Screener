@@ -6,6 +6,15 @@ RecruitAI is an intelligent, automated resume screening application designed to 
 
 The application is split into a robust Node.js backend and a modern React frontend. It allows recruiters to paste a Job Description and upload multiple candidate resumes (PDF, DOCX). The system parses the documents, feeds the extracted text into an AI model, and returns a structured evaluation for each candidate.
 
+### 📸 Screenshots
+<div align="center">
+  <img src="./demo/Screenshot%202026-05-30%20165429.png" width="400" alt="App Screenshot 1" />
+  <img src="./demo/Screenshot%202026-05-30%20165435.png" width="400" alt="App Screenshot 2" />
+  <br/>
+  <img src="./demo/Screenshot%202026-05-30%20165539.png" width="400" alt="App Screenshot 3" />
+  <img src="./demo/Screenshot%202026-05-30%20165546.png" width="400" alt="App Screenshot 4" />
+</div>
+
 ### Key Features
 - **AI-Powered Analysis**: Uses Groq LLM to identify candidate names, matching skills, missing skills, experience, education, and provide a qualitative summary.
 - **Dynamic Scoring**: Automatically scores candidates using skills match, experience relevance, education alignment, and AI score hints.
