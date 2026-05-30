@@ -16,7 +16,41 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+function isAllowedOrigin(origin) {
+    if (!origin) {
+        return true;
+    }
+
+    if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return true;
+    }
+
+    return allowedOrigins.some((allowedOrigin) => {
+        if (!allowedOrigin.includes("*")) {
+            return false;
+        }
+
+        const pattern = new RegExp(`^${allowedOrigin.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, ".*")}$`);
+        return pattern.test(origin);
+    });
+}
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+            callback(null, true);
+            return;
+        }
+
+        callback(new Error(`CORS blocked origin: ${origin}`));
+    }
+}));
 app.use(express.json());
 
 const limiter = rateLimit({

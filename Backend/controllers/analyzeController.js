@@ -71,6 +71,9 @@ export const analyzeResumes = async (req, res) => {
                 try {
                     storedFile = await persistUpload(file);
                     const text = await extractText(storedFile.storedPath, storedFile.mimeType);
+                    if (storedFile.storage === "postgres") {
+                        await fs.promises.unlink(storedFile.storedPath).catch(() => {});
+                    }
 
                     if (!text) {
                         return {
@@ -143,8 +146,19 @@ export const getAnalysisHistory = async (_req, res) => {
 
 export const previewResume = async (req, res) => {
     try {
-        const filePath = await getStoredFile(req.params.storedName);
-        res.sendFile(filePath);
+        const storedFile = await getStoredFile(req.params.storedName);
+
+        if (storedFile.storage === "postgres") {
+            res.setHeader("Content-Type", storedFile.mimeType);
+            res.setHeader(
+                "Content-Disposition",
+                `inline; filename="${storedFile.originalName.replace(/"/g, "")}"`
+            );
+            res.send(storedFile.content);
+            return;
+        }
+
+        res.sendFile(storedFile.filePath);
     } catch {
         res.status(404).json({ error: "Resume file not found" });
     }

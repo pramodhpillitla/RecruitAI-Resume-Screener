@@ -12,6 +12,7 @@ const jsonStorePath = path.join(dataDir, "analyses.json");
 
 let pool;
 let pgReady = false;
+let pgFailed = false;
 
 function getPool() {
     if (!process.env.DATABASE_URL) {
@@ -42,22 +43,41 @@ async function ensureLocalStore() {
 }
 
 async function ensurePostgres() {
+    if (pgFailed) return false;
+
     const db = getPool();
     if (!db || pgReady) {
         return Boolean(db);
     }
 
-    await db.query(`
-        CREATE TABLE IF NOT EXISTS analyses (
-            id TEXT PRIMARY KEY,
-            jd_text TEXT NOT NULL,
-            results JSONB NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    `);
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS analyses (
+                id TEXT PRIMARY KEY,
+                jd_text TEXT NOT NULL,
+                results JSONB NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        `);
 
-    pgReady = true;
-    return true;
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS stored_files (
+                stored_name TEXT PRIMARY KEY,
+                original_name TEXT NOT NULL,
+                mime_type TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                content BYTEA NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        `);
+
+        pgReady = true;
+        return true;
+    } catch (error) {
+        console.error("Postgres initialization failed. Falling back to local storage:", error.message);
+        pgFailed = true;
+        return false;
+    }
 }
 
 export async function ensureStorage() {
@@ -74,6 +94,25 @@ export async function persistUpload(file) {
 
     const ext = path.extname(file.originalname || "");
     const storedName = `${createId()}${ext}`;
+
+    if (await ensurePostgres()) {
+        const content = await fs.readFile(file.path);
+        await getPool().query(
+            `INSERT INTO stored_files (stored_name, original_name, mime_type, size, content)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [storedName, file.originalname, file.mimetype, file.size, content]
+        );
+
+        return {
+            originalName: file.originalname,
+            storedName,
+            storedPath: file.path,
+            mimeType: file.mimetype,
+            size: file.size,
+            storage: "postgres"
+        };
+    }
+
     const storedPath = path.join(storedUploadsDir, storedName);
 
     await fs.rename(file.path, storedPath);
@@ -83,7 +122,8 @@ export async function persistUpload(file) {
         storedName,
         storedPath,
         mimeType: file.mimetype,
-        size: file.size
+        size: file.size,
+        storage: "local"
     };
 }
 
@@ -141,7 +181,33 @@ export async function listAnalyses() {
 
 export async function getStoredFile(storedName) {
     const safeName = path.basename(storedName);
+
+    if (await ensurePostgres()) {
+        const { rows } = await getPool().query(
+            `SELECT stored_name, original_name, mime_type, size, content
+             FROM stored_files
+             WHERE stored_name = $1`,
+            [safeName]
+        );
+
+        if (!rows[0]) {
+            throw new Error("Stored file not found");
+        }
+
+        return {
+            storage: "postgres",
+            storedName: rows[0].stored_name,
+            originalName: rows[0].original_name,
+            mimeType: rows[0].mime_type,
+            size: rows[0].size,
+            content: rows[0].content
+        };
+    }
+
     const filePath = path.join(storedUploadsDir, safeName);
     await fs.access(filePath);
-    return filePath;
+    return {
+        storage: "local",
+        filePath
+    };
 }

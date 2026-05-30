@@ -1,10 +1,17 @@
 import express from "express";
 import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
 
-import { analyzeResumes } from "../controllers/analyzeController.js";
-import { getAnalysisHistory, previewResume } from "../controllers/analyzeController.js";
+import {
+    analyzeResumes,
+    getAnalysisHistory,
+    previewResume
+} from "../controllers/analyzeController.js";
 
 const router = express.Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadDir = path.resolve(__dirname, "..", "uploads");
 
 const allowedMimeTypes = new Set([
     "application/pdf",
@@ -13,7 +20,7 @@ const allowedMimeTypes = new Set([
 ]);
 
 const upload = multer({
-    dest: "uploads/",
+    dest: uploadDir,
     limits: {
         fileSize: 5 * 1024 * 1024,
         files: 11
