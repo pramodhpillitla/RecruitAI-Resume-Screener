@@ -1,158 +1,65 @@
-# RecruitAI
+# RecruitAI - Smart Resume Screener
 
-RecruitAI is a full-stack resume screening and candidate ranking web application. It compares uploaded resumes against a job description, generates a match score from 0-100, and ranks candidates from highest to lowest fit.
+RecruitAI is an intelligent, automated resume screening application designed to optimize the recruitment workflow. By leveraging Large Language Models (LLMs), it analyzes candidate resumes against specific Job Descriptions (JDs), providing recruiters with instant, data-driven insights, skill gap analysis, and candidate scoring.
 
-## Features
+## 🚀 Brief Documentation
 
-- Upload up to 10 resumes at once.
-- Supports PDF, DOC, and DOCX resume files.
-- Enter a job description manually or upload a JD document.
-- Extracts resume/JD text on the backend.
-- Uses Groq LLM analysis to identify candidate name, matching skills, missing skills, experience, education, and summary.
-- Scores candidates using skills match, experience relevance, education alignment, and AI score hints.
-- Displays ranked candidates with score rings, rank, matching skills, missing skills, summary, and resume preview links.
-- Search candidates by name, skills, missing skills, or summary.
-- Sort results by score or candidate name.
-- Export visible results as CSV or Excel-compatible `.xls`.
-- Stores uploaded resumes and analysis metadata.
-- Uses PostgreSQL when `DATABASE_URL` is configured, including durable resume file storage in the database.
-- Falls back to local JSON metadata and disk file storage only for local demos.
+The application is split into a robust Node.js backend and a modern React frontend. It allows recruiters to paste a Job Description and upload multiple candidate resumes (PDF, DOCX). The system parses the documents, feeds the extracted text into an AI model, and returns a structured evaluation for each candidate.
 
-## Architecture
+### Key Features
+- **AI-Powered Analysis**: Uses Groq LLM to identify candidate names, matching skills, missing skills, experience, education, and provide a qualitative summary.
+- **Dynamic Scoring**: Automatically scores candidates using skills match, experience relevance, education alignment, and AI score hints.
+- **Interactive UI**: View ranked candidates with score rings, rank, matching skills, missing skills, and summary.
+- **Search & Sort**: Filter candidates by name, skills, or missing skills, and sort by score or name.
+- **Export**: Export visible results as CSV or Excel-compatible `.xls`.
 
-```txt
-React + Vite Frontend
-        |
-        | multipart/form-data
-        v
-Node.js + Express Backend
-        |
-        |-- Multer upload handling
-        |-- pdf-parse / mammoth text extraction
-        |-- Groq chat completions for structured resume analysis
-        |-- Scoring service for final 0-100 score
-        |-- PostgreSQL durable analysis/file storage
-        |-- Local JSON/disk fallback for development
-        |-- Stored resume preview endpoint
-```
+### Tech Stack
+- **Frontend**: React 19, Vite, Tailwind CSS 4, Framer Motion, React Dropzone.
+- **Backend**: Node.js, Express, PostgreSQL, Multer (file handling), PDF-Parse / Mammoth (document parsing).
+- **AI Engine**: Groq API (powered by `llama-3.3-70b-versatile`).
 
-## Scoring Approach
+---
 
-The backend asks Groq to return structured JSON for each resume:
+## 🏗️ Architecture Overview
 
-- candidate name
-- matching skills
-- missing skills
-- years of experience
-- education
-- summary
-- score hint
+The system follows a decoupled client-server architecture:
 
-Final score is calculated in `Backend/services/scoringService.js`:
+1. **Client Layer (React/Vite)**: 
+   - A responsive Single Page Application (SPA) providing a drag-and-drop interface for resume uploads.
+   - Communicates with the backend via RESTful APIs.
+2. **API & Orchestration Layer (Node.js/Express)**:
+   - Handles incoming multipart form data (documents).
+   - Extracts raw text from binary document formats (PDFs, DOCX).
+   - Constructs engineered prompts combining the JD and the candidate's resume text.
+3. **AI Processing Layer (Groq AI)**:
+   - Utilizes `llama-3.3-70b-versatile` for high-speed, accurate Natural Language Processing.
+   - Enforces structured JSON outputs to guarantee predictable data structures.
+4. **Persistence Layer (PostgreSQL / Local File System)**:
+   - Employs a resilient storage strategy: primarily attempts to store parsed files and AI results in a PostgreSQL database.
+   - Implements an automatic, graceful fallback to local JSON (`analyses.json`) and disk storage if the database is unreachable, ensuring zero downtime.
 
-- Skills match contributes up to 50 points.
-- Experience contributes up to 20 points.
-- Education alignment contributes up to 10 points.
-- Groq score hint contributes up to 20 points.
+---
 
-The final value is clamped between 0 and 100 and candidates are ranked by descending score.
+## 🎯 Approach Used for Scoring Candidates
 
-## Setup
+The candidate scoring mechanism relies on **Prompt Engineering** and **Structured LLM Outputs**:
 
-Install dependencies:
+- **Contextual Prompting**: The AI is instructed to adopt the persona of an expert HR recruiter. It is provided with both the complete Job Description and the parsed Resume text (truncated safely to fit context windows).
+- **Multi-dimensional Evaluation**: Rather than simple keyword matching, the LLM semantically evaluates the candidate across several axes:
+  - **Skills Match**: Identifying overlapping core competencies.
+  - **Missing Skills**: Highlighting critical gaps based on the JD requirements.
+  - **Experience & Education**: Extracting and validating the candidate's tenure and academic background.
+- **Quantitative Scoring (`score_hint`)**: The LLM synthesizes these dimensions to calculate a normalized score from `0` to `100`. This score reflects the holistic fit of the candidate for the role, weighted by the presence of mandatory skills and relevant experience.
+- **Fault Tolerance**: The AI interaction includes exponential backoff and retry logic to handle rate limits or transient API errors, ensuring reliable scoring.
 
-```bash
-cd Backend
-npm install
-cd ../Frontend
-npm install
-```
+---
 
-Create backend environment:
+## 📌 Assumptions
 
-```bash
-cd Backend
-copy .env.sample .env
-```
+During the design and implementation of this system, the following technical and operational assumptions were made:
 
-Set your Groq credentials in `Backend/.env`:
-
-```env
-PORT=5000
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
-CORS_ORIGIN=http://localhost:5173,https://*.vercel.app
-DATABASE_URL=
-DATABASE_SSL=false
-```
-
-`DATABASE_URL` is optional for local demo mode. For production, use a PostgreSQL connection string. When `DATABASE_URL` is configured, both analysis metadata and uploaded resume file bytes are stored in PostgreSQL.
-
-Create frontend environment:
-
-```bash
-cd Frontend
-copy .env.sample .env
-```
-
-```env
-VITE_API_BASE_URL=http://localhost:5000
-```
-
-## Running Locally
-
-Start the backend:
-
-```bash
-cd Backend
-npm run dev
-```
-
-Start the frontend:
-
-```bash
-cd Frontend
-npm run dev
-```
-
-Backend endpoints:
-
-- `GET /api/health`
-- `POST /api/analyze`
-- `GET /api/analyze/history`
-- `GET /api/analyze/files/:storedName`
-
-## Deployment
-
-Suggested deployment:
-
-- Frontend: Vercel or Netlify.
-- Backend: Render, Railway, or any Node.js host.
-- Database: Render PostgreSQL, Supabase, Railway PostgreSQL, Neon, or AWS RDS.
-
-Set production environment variables:
-
-```env
-GROQ_API_KEY=...
-GROQ_MODEL=llama-3.3-70b-versatile
-CORS_ORIGIN=https://your-frontend-domain.com,https://*.vercel.app
-DATABASE_URL=postgresql://...
-DATABASE_SSL=true
-```
-
-Set frontend `VITE_API_BASE_URL` to the deployed backend URL.
-
-## Assumptions
-
-- Resume/JD files are limited to 5 MB each.
-- `.doc` support depends on parser compatibility; `.docx` and PDF are preferred.
-- Production storage uses PostgreSQL for both analysis metadata and resume file bytes when `DATABASE_URL` is configured.
-- Local development without `DATABASE_URL` uses backend disk storage for resume previews.
-- Groq response quality depends on the selected model and quota availability.
-
-## Deliverables
-
-- Complete source code: this repository.
-- README with setup, architecture, scoring, assumptions, and deployment notes.
-- Deployed application URL: add your deployed frontend link here.
-- GitHub repository link: add your repository link here.
+1. **Document Formats**: Candidate resumes are provided in standard, text-extractable formats (PDF or DOCX). Scanned documents requiring OCR (Optical Character Recognition) are outside the current scope.
+2. **Language**: Both the Job Descriptions and Resumes are written primarily in English.
+3. **JD Quality**: The provided Job Description is comprehensive and clearly outlines the required skills and experience, allowing the LLM to establish an accurate baseline for comparison.
+4. **API Availability**: The Groq API is highly available. The system assumes that if the API fails after the maximum configured retries, the candidate analysis will degrade gracefully (returning a parsing failure status rather than crashing the server).
+5. **Database Environment**: While PostgreSQL is the preferred storage engine, the system assumes it might be deployed in environments without immediate database access, hence the robust local-storage fallback mechanism.
